@@ -6,6 +6,8 @@
 , libpaper, graphite2, zziplib, harfbuzz, potrace, gmp, mpfr
 , brotli, cairo, pixman, xorg, clisp, biber, woff2, xxHash
 , makeWrapper, shortenPerlShebang, useFixedHashes, asymptote
+# version specific args
+, year, src
 }:
 
 # Useful resource covering build options:
@@ -14,22 +16,14 @@
 let
   withSystemLibs = map (libname: "--with-system-${libname}");
 
-  year = toString ((import ./tlpdb.nix)."00texlive.config").year;
-  version = year; # keep names simple for now
+  version = toString year; # keep names simple for now
 
   # detect and stop redundant rebuilds that may occur when building new fixed hashes
   assertFixedHash = name: src:
     if ! useFixedHashes || src ? outputHash then src else throw "The TeX Live package '${src.pname}' must have a fixed hash before building '${name}'.";
 
   common = {
-    src = fetchurl {
-      urls = [
-        "http://ftp.math.utah.edu/pub/tex/historic/systems/texlive/${year}/texlive-${year}0321-source.tar.xz"
-              "ftp://tug.ctan.org/pub/tex/historic/systems/texlive/${year}/texlive-${year}0321-source.tar.xz"
-      ];
-      hash = "sha256-X/o0heUessRJBJZFD8abnXvXy55TNX2S20vNT9YXm1Y=";
-    };
-
+    inherit src;
     prePatch = ''
       for i in texk/kpathsea/mktex*; do
         sed -i '/^mydir=/d' "$i"
@@ -76,7 +70,7 @@ let
 in rec { # un-indented
 
 inherit (common) cleanBrokenLinks;
-texliveYear = year;
+texliveYear = version;
 
 
 core = stdenv.mkDerivation rec {

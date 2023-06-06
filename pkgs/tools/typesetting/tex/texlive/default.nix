@@ -8,8 +8,9 @@
 , python3, ruby, perl, tk, jdk, bash
 , gnused, gnugrep, coreutils
 , libfaketime, makeFontsConf, asymptote
-, useFixedHashes ? true
 , recurseIntoAttrs
+# version specific stuff
+, tlpdb, tlpdbxz, version, fixedHashes, urlPrefixes, src, texlive, useFixedHashes
 }:
 let
   # various binaries (compiled)
@@ -19,6 +20,9 @@ let
       withIcu = true; withGraphite2 = true;
     };
     inherit useFixedHashes;
+    # version specific stuff
+    inherit src texlive;
+    year = version.texliveYear;
   };
 
   # function for creating a working environment from a set of TL packages
@@ -27,8 +31,6 @@ let
       stdenv perl gnused gnugrep coreutils libfaketime makeFontsConf bash tl;
     ghostscript = ghostscript_headless;
   };
-
-  tlpdb = import ./tlpdb.nix;
 
   tlpdbVersion = tlpdb."00texlive.config";
 
@@ -258,40 +260,6 @@ let
         ++ lib.optional (attrs.hasTlpkg or false) (mkPkgV "tlpkg")
         ++ lib.optional (attrs ? binfiles) (mkPkgBin pname version run attrs);
     };
-
-  version = {
-    # day of the snapshot being taken
-    year = "2023";
-    month = "03";
-    day = "19";
-    # TeX Live version
-    texliveYear = 2022;
-    # final (historic) release or snapshot
-    final = true;
-  };
-
-  # The tarballs on CTAN mirrors for the current release are constantly
-  # receiving updates, so we can't use those directly. Stable snapshots
-  # need to be used instead. Ideally, for the release branches of NixOS we
-  # should be switching to the tlnet-final versions
-  # (https://tug.org/historic/).
-  urlPrefixes = with version; lib.optionals final  [
-    # tlnet-final snapshot; used when texlive.tlpdb is frozen
-    # the TeX Live yearly freeze typically happens in mid-March
-    "http://ftp.math.utah.edu/pub/tex/historic/systems/texlive/${toString texliveYear}/tlnet-final"
-    "ftp://tug.org/texlive/historic/${toString texliveYear}/tlnet-final"
-  ] ++ [
-    # daily snapshots hosted by one of the texlive release managers;
-    # used for non-final snapshots and as fallback for final snapshots that have not reached yet the historic mirrors
-    # please note that this server is not meant for large scale deployment and should be avoided on release branches
-    # https://tug.org/pipermail/tex-live/2019-November/044456.html
-    "https://texlive.info/tlnet-archive/${year}/${month}/${day}/tlnet"
-  ];
-
-  tlpdbxz = fetchurl {
-    urls = map (up: "${up}/tlpkg/texlive.tlpdb.xz") urlPrefixes;
-    hash = "sha256-vm7DmkH/h183pN+qt1p1wZ6peT2TcMk/ae0nCXsCoMw=";
-  };
 
   tlpdbNix = runCommand "tlpdb.nix" {
     inherit tlpdbxz;
