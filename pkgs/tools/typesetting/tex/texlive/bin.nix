@@ -4,10 +4,10 @@
 , freetype, gd, libXaw, icu, ghostscript, libXpm, libXmu, libXext
 , perl, perlPackages, python3Packages, pkg-config
 , libpaper, graphite2, zziplib, harfbuzz, potrace, gmp, mpfr
-, brotli, cairo, pixman, xorg, clisp, biber, woff2, xxHash
-, makeWrapper, shortenPerlShebang, useFixedHashes, asymptote
+, brotli, cairo, pixman, xorg, clisp, biber, woff2, xxHash, luametatex
+, makeWrapper, shortenPerlShebang, asymptote, runCommand
 # version specific args
-, year, src
+, year, src, useFixedHashes
 }:
 
 # Useful resource covering build options:
@@ -558,4 +558,16 @@ xindy = stdenv.mkDerivation {
   '';
 };
 
+}
+// lib.optionalAttrs (lib.versionAtLeast version "2023")
+{
+  context = runCommand "luametatex" {
+    inherit (luametatex) version pname ;
+  }
+  ''
+  mkdir -p $out/bin
+  ln -s ${lib.getBin luametatex}/bin/luametatex $out/bin/luametatex
+  ln -s ${lib.getBin luametatex}/bin/luametatex $out/bin/context
+  ln -s ${lib.getBin luametatex}/bin/luametatex $out/bin/mtxrun
+  '';
 }

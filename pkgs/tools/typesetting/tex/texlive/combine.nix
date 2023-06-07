@@ -255,17 +255,23 @@ in (buildEnv {
   '' +
   # TODO: a context trigger https://www.preining.info/blog/2015/06/debian-tex-live-2015-the-new-layout/
     # http://wiki.contextgarden.net/ConTeXt_Standalone#Unix-like_platforms_.28Linux.2FMacOS_X.2FFreeBSD.2FSolaris.29
-
-  # MkIV uses its own lookup mechanism and we need to initialize
+  # ConTeXt uses its own lookup mechanism and we need to initialize
   # caches for it.
   # We use faketime to fix the embedded timestamps and patch the uuids
   # with some random but constant values.
   ''
-    if [[ -e "$out/bin/mtxrun" ]]; then
+    if [[ -e "$out/bin/mtxrun" ]] && [[ -e "$TEXMFDIST"/scripts/context/lua/mtxrun.lua ]]; then
       substitute "$TEXMFDIST"/scripts/context/lua/mtxrun.lua mtxrun.lua \
         --replace 'cache_uuid=osuuid()' 'cache_uuid="e2402e51-133d-4c73-a278-006ea4ed734f"' \
         --replace 'uuid=osuuid(),' 'uuid="242be807-d17e-4792-8e39-aa93326fc871",'
       FORCE_SOURCE_DATE=1 TZ= faketime -f '@1980-01-01 00:00:00 x0.001' luatex --luaonly mtxrun.lua --generate
+
+      if [[ -e "$out/bin/luametatex" ]]; then
+        # we intentionally don't use the scripts.lst-mechanism here since we don't want to strip the suffix or wrap the scripts here.
+        # This block must be below bin.cleanBrokenLinks since this would remove the scripts (which don't have +x)
+        ln -s $TEXMFDIST/scripts/context/lua/{context,mtxrun}.lua "$out"/bin
+        FORCE_SOURCE_DATE=1 TZ= faketime -f '@1980-01-01 00:00:00 x0.001' luametatex --luaonly mtxrun.lua --generate
+      fi
     fi
   '' +
   # Get rid of all log files. They are not needed, but take up space
