@@ -5023,6 +5023,7 @@ with pkgs;
 
   # TeX Live; see https://nixos.org/nixpkgs/manual/#sec-language-texlive
   texlive = recurseIntoAttrs (callPackage ../tools/typesetting/tex/texlive/frozen.nix { });
+  texlive_latest = recurseIntoAttrs (callPackage ../tools/typesetting/tex/texlive/latest.nix { });
 
   fop = callPackage ../tools/typesetting/fop {
     jdk = openjdk8;

@@ -1,6 +1,7 @@
-with import ../../../../.. { };
+{ pkgs ? import ../../../../..  { }
+, texlive ? pkgs.texlive }:
 
-with lib; let
+with pkgs; with lib; let
   # NOTE: the fixed naming scheme must match default.nix
   # name for the URL
   mkURLName = { pname, tlType, ... }: pname + lib.optionalString (tlType != "run" && tlType != "tlpkg") ".${tlType}";

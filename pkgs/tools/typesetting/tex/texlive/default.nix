@@ -11,7 +11,7 @@
 , recurseIntoAttrs
 # version specific stuff
 , tlpdb, tlpdbxz, version, fixedHashes, urlPrefixes, src, texlive, useFixedHashes
-}:
+}@args:
 let
   # various binaries (compiled)
   bin = callPackage ./bin.nix {
@@ -270,7 +270,7 @@ let
   '';
 
   # map: name -> fixed-output hash
-  fixedHashes = lib.optionalAttrs useFixedHashes (import ./fixed-hashes.nix);
+  fixedHashes = lib.optionalAttrs useFixedHashes args.fixedHashes;
 
   # NOTE: the fixed naming scheme must match generated-fixed-hashes.nix
   # name for the URL

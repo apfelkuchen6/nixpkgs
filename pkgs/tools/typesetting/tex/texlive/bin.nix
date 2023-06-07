@@ -200,7 +200,9 @@ core-big = stdenv.mkDerivation { #TODO: upmendex
       url = "https://bugs.debian.org/cgi-bin/bugreport.cgi?att=1;bug=1009196;filename=reproducible_exception_strings.patch;msg=5";
       sha256 = "sha256-RNZoEeTcWnrLaltcYrhNIORh42fFdwMzBfxMRWVurbk=";
     })
-    # fixes a security-issue in luatex that allows arbitrary code execution even with shell-escape disabled, see https://tug.org/~mseven/luatex.html
+  ]
+  # fixes a security-issue in luatex that allows arbitrary code execution even with shell-escape disabled, see https://tug.org/~mseven/luatex.html
+  ++ lib.optional (version == "2022")
     (fetchpatch {
       name = "CVE-2023-32700.patch";
       url = "https://tug.org/~mseven/luatex-files/2022/patch";
@@ -208,12 +210,19 @@ core-big = stdenv.mkDerivation { #TODO: upmendex
       excludes = [  "build.sh" ];
       stripLen = 1;
     })
-  ];
+    # fixes a security-issue in luatex that allows arbitrary code execution even with shell-escape disabled, see https://tug.org/~mseven/luatex.html
+  ++ lib.optional (version == "2023")
+    (fetchpatch {
+      name = "luatex-1.17.patch";
+      url = "https://github.com/TeX-Live/texlive-source/commit/871c7a2856d70e1a9703d1f72f0587b9995dba5f.patch";
+      hash = "sha256-Ke7nIF/KIiJigxvn0NurMLo032afN6xNC1xhQq+OReQ=";
+    })
+  ;
 
   hardeningDisable = [ "format" ];
 
   inherit (core) nativeBuildInputs depsBuildBuild;
-  buildInputs = core.buildInputs ++ [ core cairo harfbuzz icu graphite2 libX11 ];
+  buildInputs = core.buildInputs ++ [ core cairo harfbuzz icu graphite2 libX11 ] ++ lib.optional (lib.versionAtLeast version "2023") potrace;
 
   configureFlags = common.configureFlags
     ++ withSystemLibs [ "kpathsea" "ptexenc" "cairo" "harfbuzz" "icu" "graphite2" ]
@@ -332,6 +341,18 @@ dvisvgm = stdenv.mkDerivation rec {
 
   configureFlags = common.configureFlags
     ++ [ "--with-system-kpathsea" ];
+
+  # the build system tries to 'make' a vendored copy of potrace even
+  # though we use --with-system-potrace (and there isn't even a Makefile generated for potrace).
+  #
+  # Creating a dummy-Makefile that does nothing is easier than fixing the build system.
+  postPatch = lib.optionalString (lib.versionAtLeast version "2023")
+  ''
+    cat > texk/dvisvgm/dvisvgm-src/libs/potrace/Makefile <<EOF
+    all:
+    install:
+    EOF
+   '';
 
   nativeBuildInputs = [ pkg-config ];
   buildInputs = [ core brotli ghostscript zlib freetype woff2 potrace xxHash ];
