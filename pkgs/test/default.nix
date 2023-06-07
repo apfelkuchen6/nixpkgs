@@ -63,6 +63,7 @@ with pkgs;
   overriding = callPackage ./overriding.nix { };
 
   texlive = callPackage ./texlive {};
+  texlive_latest = callPackage ./texlive { texlive = texlive_latest; isLatest = true; };
 
   cuda = callPackage ./cuda { };
 

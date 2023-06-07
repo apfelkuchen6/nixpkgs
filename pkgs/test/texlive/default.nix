@@ -1,8 +1,8 @@
-{ lib, runCommand, fetchurl, file, texlive, writeShellScript }:
+{ lib, runCommand, fetchurl, file, texlive, writeShellScript, isLatest ? false }:
 
 {
 
-  tlpdbNix = runCommand "texlive-test-tlpdb-nix" {
+  tlpdbNix = if isLatest then null else runCommand "texlive-test-tlpdb-nix" {
     nixpkgsTlpdbNix = ../../tools/typesetting/tex/texlive/tlpdb.nix;
     tlpdbNix = texlive.tlpdb.nix;
   }
@@ -46,10 +46,23 @@
         \LaTeX is great
       \end{document}
     '';
-  } ''
-    chktex -v -nall -w1 "$input" 2>&1 | tee "$out"
-    grep "One warning printed" "$out"
-  '';
+  } (
+    # the behaviour of chktex has been changed in texlive-2023.
+    # the return code now indicates whether warnings/errors have been emmited.
+    # chktex is supposed to return 2 when it (successfully) finds warnings, but no errors,
+    # see http://git.savannah.nongnu.org/cgit/chktex.git/commit/?id=ec0fb9b58f02a62ff0bfec98b997208e9d7a5998
+    if (lib.versionAtLeast texlive.bin.core.version "2023")
+    then
+      ''
+      (set +e; chktex -v -nall -w1 "$input" 2>&1; [ $? = 2 ] || exit 1; set -e)  | tee "$out"
+      # also check that the output does indeed contain "One warning printed"
+      grep "One warning printed" "$out"
+      ''
+    else
+      ''
+      chktex -v -nall -w1 "$input" 2>&1 | tee "$out"
+      grep "One warning printed" "$out"
+      '');
 
   dvipng = lib.recurseIntoAttrs {
     # https://github.com/NixOS/nixpkgs/issues/75605
