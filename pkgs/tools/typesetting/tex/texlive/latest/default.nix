@@ -32,13 +32,10 @@ let attrs = (callPackage ./../default.nix rec {
     ];
     hash = "sha256-OHiqDh7QMBwFOw4u5OmtmZxEE0X0iC55vdHI9M6eebk=";
   };
-
-  tlpdb = import ./../stable/tlpdb.nix // import ./tlpdb-latest-diff.nix;
+  tlpdb = import ./tlpdb.nix;
   tlpdbxzHash = "sha256-gkvU7XB/uLdEMLT5nyVYd18ioOwjNV8cLQVG1MwfBEc=";
 
-  fixedHashes = lib.optionalAttrs useFixedHashes
-    (import ./../stable/fixed-hashes.nix
-      // import ./fixed-hashes-latest-diff.nix);
+  fixedHashes = lib.optionalAttrs useFixedHashes (import ./fixed-hashes.nix);
   inherit useFixedHashes;
 }
 ).overrideScope (self: super: {
