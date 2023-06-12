@@ -1,13 +1,13 @@
 { lib, stdenv, fetchurl, fetchpatch, buildPackages
-, texlive
 , zlib, libiconv, libpng, libX11
 , freetype, gd, libXaw, icu, ghostscript, libXpm, libXmu, libXext
 , perl, perlPackages, python3Packages, pkg-config
 , libpaper, graphite2, zziplib, harfbuzz, potrace, gmp, mpfr
-, brotli, cairo, pixman, xorg, clisp, biber, woff2, xxHash, luametatex
-, makeWrapper, shortenPerlShebang, asymptote, runCommand
+, brotli, cairo, pixman, xorg, clisp, biber, woff2, xxHash
+, makeWrapper, shortenPerlShebang, asymptote
 # version specific args
 , year, src, useFixedHashes
+, bin, combine, texlivePackages
 }:
 
 # Useful resource covering build options:
@@ -67,7 +67,7 @@ let
 
   # RISC-V: https://github.com/LuaJIT/LuaJIT/issues/628
   withLuaJIT = !(stdenv.hostPlatform.isPower && stdenv.hostPlatform.is64bit) && !stdenv.hostPlatform.isRiscV;
-in rec { # un-indented
+in with bin; { # un-indented
 
 inherit (common) cleanBrokenLinks;
 texliveYear = version;
@@ -86,8 +86,8 @@ core = stdenv.mkDerivation rec {
   ] ++ lib.optionals (!stdenv.buildPlatform.canExecute stdenv.hostPlatform) [
     # configure: error: tangle was not found but is required when cross-compiling.
     # dev (himktables) is used when building hitex to generate the additional source file hitables.c
-    texlive.bin.core
-    texlive.bin.core.dev
+    bin.core
+    bin.core.dev
   ];
 
   buildInputs = [
@@ -200,29 +200,12 @@ core-big = stdenv.mkDerivation { #TODO: upmendex
       url = "https://bugs.debian.org/cgi-bin/bugreport.cgi?att=1;bug=1009196;filename=reproducible_exception_strings.patch;msg=5";
       sha256 = "sha256-RNZoEeTcWnrLaltcYrhNIORh42fFdwMzBfxMRWVurbk=";
     })
-  ]
-  # fixes a security-issue in luatex that allows arbitrary code execution even with shell-escape disabled, see https://tug.org/~mseven/luatex.html
-  ++ lib.optional (version == "2022")
-    (fetchpatch {
-      name = "CVE-2023-32700.patch";
-      url = "https://tug.org/~mseven/luatex-files/2022/patch";
-      hash = "sha256-o9ENLc1ZIIOMX6MdwpBIgrR/Jdw6tYLmAyzW8i/FUbY=";
-      excludes = [  "build.sh" ];
-      stripLen = 1;
-    })
-    # fixes a security-issue in luatex that allows arbitrary code execution even with shell-escape disabled, see https://tug.org/~mseven/luatex.html
-  ++ lib.optional (version == "2023")
-    (fetchpatch {
-      name = "luatex-1.17.patch";
-      url = "https://github.com/TeX-Live/texlive-source/commit/871c7a2856d70e1a9703d1f72f0587b9995dba5f.patch";
-      hash = "sha256-Ke7nIF/KIiJigxvn0NurMLo032afN6xNC1xhQq+OReQ=";
-    })
-  ;
+  ];
 
   hardeningDisable = [ "format" ];
 
   inherit (core) nativeBuildInputs depsBuildBuild;
-  buildInputs = core.buildInputs ++ [ core cairo harfbuzz icu graphite2 libX11 ] ++ lib.optional (lib.versionAtLeast version "2023") potrace;
+  buildInputs = core.buildInputs ++ [ core cairo harfbuzz icu graphite2 libX11 ];
 
   configureFlags = common.configureFlags
     ++ withSystemLibs [ "kpathsea" "ptexenc" "cairo" "harfbuzz" "icu" "graphite2" ]
@@ -342,18 +325,6 @@ dvisvgm = stdenv.mkDerivation rec {
   configureFlags = common.configureFlags
     ++ [ "--with-system-kpathsea" ];
 
-  # the build system tries to 'make' a vendored copy of potrace even
-  # though we use --with-system-potrace (and there isn't even a Makefile generated for potrace).
-  #
-  # Creating a dummy-Makefile that does nothing is easier than fixing the build system.
-  postPatch = lib.optionalString (lib.versionAtLeast version "2023")
-  ''
-    cat > texk/dvisvgm/dvisvgm-src/libs/potrace/Makefile <<EOF
-    all:
-    install:
-    EOF
-   '';
-
   nativeBuildInputs = [ pkg-config ];
   buildInputs = [ core brotli ghostscript zlib freetype woff2 potrace xxHash ];
 
@@ -388,7 +359,7 @@ latexindent = perlPackages.buildPerlPackage rec {
   pname = "latexindent";
   inherit (src) version;
 
-  src = assertFixedHash pname (lib.head (builtins.filter (p: p.tlType == "run") texlive.latexindent.pkgs));
+  src = assertFixedHash pname (lib.head (builtins.filter (p: p.tlType == "run") texlivePackages.latexindent.pkgs));
 
   outputs = [ "out" ];
 
@@ -420,7 +391,7 @@ pygmentex = python3Packages.buildPythonApplication rec {
   inherit (src) version;
   format = "other";
 
-  src = assertFixedHash pname (lib.head (builtins.filter (p: p.tlType == "run") texlive.pygmentex.pkgs));
+  src = assertFixedHash pname (lib.head (builtins.filter (p: p.tlType == "run") texlivePackages.pygmentex.pkgs));
 
   propagatedBuildInputs = with python3Packages; [ pygments chardet ];
 
@@ -456,7 +427,7 @@ pygmentex = python3Packages.buildPythonApplication rec {
 texlinks = stdenv.mkDerivation rec {
   name = "texlinks";
 
-  src = assertFixedHash name (lib.head (builtins.filter (p: p.tlType == "run") texlive.texlive-scripts-extra.pkgs));
+  src = assertFixedHash name (lib.head (builtins.filter (p: p.tlType == "run") texlivePackages.texlive-scripts-extra.pkgs));
 
   dontBuild = true;
   doCheck = false;
@@ -543,7 +514,7 @@ xindy = stdenv.mkDerivation {
 
   nativeBuildInputs = [
     pkg-config perl
-    (texlive.combine { inherit (texlive) scheme-basic cyrillic ec; })
+    (combine { inherit (texlivePackages) scheme-basic cyrillic ec; })
   ];
   buildInputs = [ clisp libiconv perl ];
 
@@ -558,16 +529,4 @@ xindy = stdenv.mkDerivation {
   '';
 };
 
-}
-// lib.optionalAttrs (lib.versionAtLeast version "2023")
-{
-  context = runCommand "luametatex" {
-    inherit (luametatex) version pname ;
-  }
-  ''
-  mkdir -p $out/bin
-  ln -s ${lib.getBin luametatex}/bin/luametatex $out/bin/luametatex
-  ln -s ${lib.getBin luametatex}/bin/luametatex $out/bin/context
-  ln -s ${lib.getBin luametatex}/bin/luametatex $out/bin/mtxrun
-  '';
 }

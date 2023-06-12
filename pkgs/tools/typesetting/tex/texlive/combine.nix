@@ -1,4 +1,8 @@
-params: with params;
+{ lib
+, ghostscript, runCommand, writeText, buildEnv, makeWrapper, makeFontsConf, libfaketime
+, python3, ruby, perl, bash, gnused, gnugrep, coreutils
+, bin, texlivePackages
+}:
 # combine =
 args@{
   pkgFilter ? (pkg: pkg.tlType == "run" || pkg.tlType == "bin" || pkg.pname == "core"
@@ -8,7 +12,24 @@ args@{
 , ...
 }:
 let
+  # combine a set of TL packages into a single TL meta-package
+  combinePkgs = pkgList: lib.catAttrs "pkg" (
+    let
+      # a TeX package is an attribute set { pkgs = [ ... ]; ... } where pkgs is a list of derivations
+      # the derivations make up the TeX package and optionally (for backward compatibility) its dependencies
+      tlPkgToSets = { pkgs, ... }: map ({ tlType, version ? "", outputName ? "", ... }@pkg: {
+          # outputName required to distinguish among bin.core-big outputs
+          key = "${pkg.pname or pkg.name}.${tlType}-${version}-${outputName}";
+          inherit pkg;
+        }) pkgs;
+      pkgListToSets = lib.concatMap tlPkgToSets; in
+    builtins.genericClosure {
+      startSet = pkgListToSets pkgList;
+      operator = { pkg, ... }: pkgListToSets (pkg.tlDeps or []);
+    });
+
   pkgSet = removeAttrs args [ "pkgFilter" "extraName" "extraVersion" ];
+
   pkgList = rec {
     combined = combinePkgs (lib.attrValues pkgSet);
     all = lib.filter pkgFilter combined;
@@ -29,7 +50,7 @@ let
     # remove fake derivations (without 'outPath') to avoid undesired build dependencies
     paths = lib.catAttrs "outPath" pkgList.nonbin;
 
-    nativeBuildInputs = [ (lib.last tl.texlive-scripts.pkgs) ];
+    nativeBuildInputs = [ (lib.last texlivePackages.texlive-scripts.pkgs) ];
 
     postBuild = # generate ls-R database
     ''
@@ -86,8 +107,8 @@ in (buildEnv {
     makeWrapper
     libfaketime
     perl
-    (lib.last tl.texlive-scripts.pkgs) # fmtutil, mktexlsr, updmap
-    (lib.last tl.texlive-scripts-extra.pkgs) # texlinks
+    (lib.last texlivePackages.texlive-scripts.pkgs) # fmtutil, mktexlsr, updmap
+    (lib.last texlivePackages.texlive-scripts-extra.pkgs) # texlinks
   ];
 
   passthru = {
