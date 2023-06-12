@@ -1,15 +1,22 @@
-{ lib, runCommand, fetchurl, file, texlive, writeShellScript, isLatest ? false }:
+{ lib, nix, runCommand, fetchurl, file, texlive, writeText, writeShellScript}:
 
 {
 
-  tlpdbNix = if isLatest then null else runCommand "texlive-test-tlpdb-nix" {
-    nixpkgsTlpdbNix = ../../tools/typesetting/tex/texlive/tlpdb.nix;
-    tlpdbNix = texlive.tlpdb.nix;
-  }
-  ''
-    mkdir -p "$out"
-    diff -u "''${nixpkgsTlpdbNix}" "''${tlpdbNix}" | tee "$out/tlpdb.nix.patch"
-  '';
+  tlpdbNix =
+    let
+      usedTlpdb = writeText "tlpdb.json" (builtins.toJSON texlive.tlpdb.__tlpdb);
+      wantedTlpdb = texlive.tlpdb.nix;
+    in
+    runCommand "texlive-test-tlpdb-nix" {
+      nativeBuildInputs = [ nix ];
+    }
+    ''
+      nix --store $(mktemp -d) --extra-experimental-features nix-command eval --impure --expr 'let
+          wanted = import ${wantedTlpdb};
+          used = builtins.fromJSON (builtins.readFile ${usedTlpdb});
+        in wanted == used
+      ' | grep true > $out
+    '';
 
   opentype-fonts = runCommand "texlive-test-opentype" {
     nativeBuildInputs = [

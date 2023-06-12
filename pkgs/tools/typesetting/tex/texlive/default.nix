@@ -3,7 +3,7 @@
   - current html: https://nixos.org/nixpkgs/manual/#sec-language-texlive
 */
 { lib, newScope
-, fetchurl
+, fetchurl, runCommand
 , ghostscript_headless, harfbuzz
 , tlpdb, version, fixedHashes, urlPrefixes, tlpdbxzHash, src, useFixedHashes
 }@args:
@@ -28,22 +28,27 @@ lib.makeScope newScope (self: with self; {
   # the set of TeX Live packages, collections, and schemes; using upstream naming
   texlivePackages = self.callPackage  ./make-texlive-packages.nix {
     inherit (args) useFixedHashes fixedHashes tlpdb urlPrefixes;
-    tlpdbxz = self.tlpdb.tlpdbxz;
+    tlpdbxz = self.tlpdb.xz;
   };
 
   # nested in an attribute set to prevent them from appearing in search
-  tlpdb = {
-    tlpdbxz = fetchurl {
+  tlpdb = rec {
+    # this is the attrset imported from stable/tlpdb.nix
+    # It is used in a test to verify that it matches the file in texlive.tlpdb.nix
+    # TODO: better name!
+    __tlpdb = tlpdb;
+
+    xz = fetchurl {
       url = (up: "${up}/tlpkg/texlive.tlpdb.xz") (lib.last urlPrefixes);
       hash = tlpdbxzHash;
     };
 
-    tlpdbNix = runCommand "tlpdb.nix" {
-      inherit tlpdbxz;
+    nix = runCommand "tlpdb.nix" {
+      inherit xz;
       tl2nix = ./tl2nix.sed;
     }
     ''
-      xzcat "$tlpdbxz" | sed -rn -f "$tl2nix" | uniq > "$out"
+      xzcat "$xz" | sed -rn -f "$tl2nix" | uniq > "$out"
     '';
   };
 
