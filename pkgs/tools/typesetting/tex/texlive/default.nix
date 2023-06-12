@@ -2,13 +2,28 @@
   - source: ../../../../../doc/languages-frameworks/texlive.xml
   - current html: https://nixos.org/nixpkgs/manual/#sec-language-texlive
 */
-{ lib, newScope
+{ lib
+, makeScopeWithSplicing, pkgsBuildBuild, pkgsBuildHost, pkgsBuildTarget, pkgsHostHost, pkgsHostTarget
 , fetchurl, runCommand
 , ghostscript_headless, harfbuzz
 , tlpdb, version, fixedHashes, urlPrefixes, tlpdbxzHash, src, useFixedHashes
-}@args:
+}:
 
-lib.makeScope newScope (self: with self; {
+let
+  # the arguments explicity passed in stable/default.nix or latest/default.nix
+  args = { inherit tlpdb version fixedHashes urlPrefixes tlpdbxzHash src useFixedHashes; };
+  # this looks ugly, but is neccessary for cross compilation
+  spliced = {
+    selfBuildBuild = pkgsBuildBuild.callPackage ./. args;
+    selfBuildHost = pkgsBuildHost.callPackage ./. args;
+    selfBuildTarget = pkgsBuildTarget.callPackage ./. args;
+    selfHostHost = pkgsHostHost.callPackage ./. args;
+    selfHostTarget = pkgsHostTarget.callPackage ./. args;
+    selfTargetTarget = {}; # there is no callPackage for TargetTarget
+  };
+in
+
+makeScopeWithSplicing spliced (_extra: { }) (_keep: { }) (self: with self; {
 
   # various binaries (compiled)
   bin = assert assertions; self.callPackage ./bin.nix {

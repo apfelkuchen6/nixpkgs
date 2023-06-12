@@ -27,7 +27,7 @@ let attrs = (callPackage ./../default.nix rec {
   fixedHashes = lib.optionalAttrs useFixedHashes (import ./fixed-hashes.nix);
   inherit useFixedHashes;
 }
-).overrideScope' (self: super: {
+).overrideScope (self: super: {
   bin = super.bin // {
     # fixes a security-issue in luatex that allows arbitrary code execution even with shell-escape disabled,
     # see https://tug.org/~mseven/luatex.html for more details
