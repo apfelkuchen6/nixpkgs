@@ -31,6 +31,6 @@ let
 
   fixedHashes = lib.optionalAttrs useFixedHashes (import ./fixed-hashes.nix);
 
-in callPackage ./default.nix {
+in callPackage ./../default.nix {
   inherit version tlpdb tlpdbxz fixedHashes urlPrefixes src useFixedHashes;
 }

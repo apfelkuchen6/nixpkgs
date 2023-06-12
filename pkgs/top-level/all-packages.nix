@@ -5022,8 +5022,8 @@ with pkgs;
   texFunctions = callPackage ../tools/typesetting/tex/nix pkgs;
 
   # TeX Live; see https://nixos.org/nixpkgs/manual/#sec-language-texlive
-  texlive = recurseIntoAttrs (callPackage ../tools/typesetting/tex/texlive/frozen.nix { });
-  texlive_latest = recurseIntoAttrs (callPackage ../tools/typesetting/tex/texlive/latest.nix { });
+  texlive = recurseIntoAttrs (callPackage ../tools/typesetting/tex/texlive/stable { });
+  texlive_latest = recurseIntoAttrs (callPackage ../tools/typesetting/tex/texlive/latest { });
 
   fop = callPackage ../tools/typesetting/fop {
     jdk = openjdk8;
