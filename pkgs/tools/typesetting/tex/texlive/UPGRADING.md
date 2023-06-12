@@ -19,19 +19,28 @@ with more than 100 updates per month.
 To create a consistent and reproducible package set in nixpkgs, we generate nix
 expressions for all packages in TeX Live at a certain day.
 
-To upgrade the package snapshot, follow this process.
+nixpkgs contains two versions of texlive:
+ - texlive_latest contains the binaries from the current texlive release
+   with packages from a freqently updated tlnet snapshot
+
+ - texlive contains the binaries from the last texlive release
+   with packages snapshotted on the last day before the release of the
+   current version
+
+To upgrade texlive, follow this process. The process is similar for the latest and for
+the stable verion. We describe the upgrading for the stable version first.
 
 ### Upgrade package information from texlive package database
 
-Update `version` in `default.nix` with the day of the new snapshot, the new TeX
-Live year, and the final status of the snapshot. Then update
-`texlive.tlpdbxz.hash` to match the new hash of `texlive.tlpdb.xz` and run
+Update the `version`, `src` and `tlpdbxzHash`, attributes in in `stable/default.nix`
+with the information of the new version. Make sure that `texlive.tlpdb.xz.hash`
+does indeed match the new hash of `texlive.tlpdb.xz` and run
 
 ```bash
 nix-build ../../../../.. -A texlive.tlpdb.nix --no-out-link
 ```
 
-This will download either the daily or the final snapshot of the TeX Live
+This will download the final snapshot of the TeX Live
 package database `texlive.tlpdb.xz` and extract the relevant package info
 (including version numbers and sha512 hashes) for the selected upstream
 distribution.
@@ -63,7 +72,7 @@ cannot be parallelized because it relies on 'import from derivation'.
 nix-build generate-fixed-hashes.nix -A fixedHashesNix
 ```
 
-Finally, copy the result to `fixed-hashes.nix`.
+Finally, copy the result to `stable/fixed-hashes.nix`.
 
 **Warning.** The expression `fixedHashesNix` reuses the *previous* fixed hashes
 when possible. This is based on two assumptions: that `.tar.xz` archives with
@@ -77,11 +86,32 @@ hashes for the relevant package, or for all packages.
 Commit the updated `tlpdb.nix` and `fixed-hashes.nix` to the repository with
 a message like
 
-> texlive: 2022-final -> 2023.20230401
+> texlive: 2022-final -> 2023-final
 
 Please make sure to follow the [CONTRIBUTING](https://github.com/NixOS/nixpkgs/blob/master/CONTRIBUTING.md)
 guidelines.
 Commit the updated `pkgs.nix` and `fixedHashes.nix` to the repository.
+
+### Updating the latest version
+
+To reduce the file size, we don't store the full `tlpdb.nix` and `fixed-hashes.nix` files,
+but only the differences to the stable version.
+
+When updating, we generate the full `tlpdb.nix` and `fixed-hashes.nix` files
+first and then extract the differences to the stable version. This
+can be done with the following commands:
+
+```bash
+TLPDB_LATEST=$(nix-build ../../../../.. -A texlive_latest.tlpdb.nix --no-out-link)
+deletions=$(nix --extra-experimental-features nix-command eval --impure --expr "with import <nixpkgs> {}; let stable = import ./stable/tlpdb.nix; latest = import $TLPDB_LATEST;"' in lib.filter (n: !latest ? "${n}") (lib.attrNames stable)')
+changes=$(nix --extra-experimental-features nix-command eval --impure --expr "with import <nixpkgs> {}; let stable = import ./stable/tlpdb.nix; latest = import $TLPDB_LATEST;"' in lib.filterAttrs (n: v:( stable."${n}" or null) != v) latest')
+echo "removeAttrs (import ./../stable/tlpdb.nix) ${deletions} // ${changes}" > latest/tlpdb.nix
+
+nix-build generate-fixed-hashes.nix --arg texlive '(import ../../../../.. {}).texlive_latest' -A newHashes -j 8
+FIXED_LATEST=$(nix-build generate-fixed-hashes.nix --arg texlive '(import ../../../../.. {}).texlive_latest' -A fixedHashesNix)
+changes=$(nix --extra-experimental-features nix-command eval --impure --expr "with import <nixpkgs> {}; let stable = import ./stable/fixed-hashes.nix; latest = import $FIXED_LATEST;"' in lib.filterAttrs (n: v:( stable."${n}" or null) != v) latest')
+echo "import ./../stable/fixed-hashes.nix // ${changes}" > latest/fixed-hashes.nix
+```
 
 ## Reviewing the bin containers
 

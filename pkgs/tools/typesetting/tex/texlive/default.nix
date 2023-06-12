@@ -1,5 +1,5 @@
 /* TeX Live user docs
-  - source: ../../../../../doc/languages-frameworks/texlive.xml
+  - source: ../../../../../doc/languages-frameworks/texlive.md
   - current html: https://nixos.org/nixpkgs/manual/#sec-language-texlive
 */
 { lib
