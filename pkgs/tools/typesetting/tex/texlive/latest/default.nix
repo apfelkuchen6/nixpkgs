@@ -67,8 +67,32 @@ let attrs = (callPackage ./../default.nix rec {
       '';
     });
   };
+
+  texlivePackages = super.texlivePackages.overrideAttrs (tlself: tlsuper:
+    {
+      overridden = tlsuper.overridden // {
+        context = tlsuper.overridden.context // {
+          scriptsFolder = "context/lua";
+          binaliases = {
+            context = luametatex + "/bin/luametatex";
+            luametatex = luametatex + "/bin/luametatex";
+            mtxrun = luametatex + "/bin/luametatex";
+          };
+          postFixup =
+          # these scripts should not be called explicity,
+          # they are read by the engine and MUST NOT be wrapped.
+          ''
+            chmod -x $out/bin/{mtxrun,context}.lua
+          '';
+        };
+
+        # upmendex is "TODO" in bin.nix
+        upmendex = removeAttrs tlsuper.overridden.upmendex [ "binfiles" ];
+      };
+    }
+  );
 });
 
 in
-# also expose the texlivePackages in the top level (`pkgs.texlive`) for compatibility reasons
+# also expose the texlivePackages in the top level (`pkgs.texlive_latest`) for compatibility reasons
 attrs.texlivePackages // attrs
