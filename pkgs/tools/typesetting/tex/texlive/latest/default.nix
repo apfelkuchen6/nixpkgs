@@ -1,5 +1,5 @@
-{ callPackage, lib, fetchurl, useFixedHashes ? true, luametatex, runCommand
-, potrace, fetchpatch }:
+{ callPackage, lib, fetchurl, useFixedHashes ? true
+, luametatex, runCommand, makeWrapper, mupdf, potrace, fetchpatch }:
 let attrs = (callPackage ./../default.nix rec {
   version = {
     # day of the snapshot being taken
@@ -54,7 +54,7 @@ let attrs = (callPackage ./../default.nix rec {
       buildInputs = olds.buildInputs ++ [ potrace ];
     });
 
-    dvisvgm = super.bin.dvisvgm.overrideAttrs (_: {
+    dvisvgm = super.bin.dvisvgm.overrideAttrs (olds: {
       # the build system tries to 'make' a vendored copy of potrace even
       # though we use --with-system-potrace (and there isn't even a Makefile generated for potrace).
       #
@@ -64,6 +64,12 @@ let attrs = (callPackage ./../default.nix rec {
         all:
         install:
         EOF
+      '';
+
+      #> ERROR: To process PDF files, either Ghostscript < 10.1 or mutool is required.
+      nativeBuildInputs = olds.nativeBuildInputs ++ [ makeWrapper ];
+      postFixup = ''
+        wrapProgram $out/bin/dvisvgm --prefix PATH : ${mupdf}/bin
       '';
     });
   };
