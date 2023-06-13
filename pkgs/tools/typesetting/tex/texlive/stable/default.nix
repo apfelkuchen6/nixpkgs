@@ -1,5 +1,5 @@
 { callPackage, lib, fetchurl, useFixedHashes ? true, fetchpatch }:
-let attrs = (callPackage ./../default.nix rec {
+let attrs = (callPackage ./../make-texlive.nix rec {
   version = {
     texliveYear = 2022;
     final = true;

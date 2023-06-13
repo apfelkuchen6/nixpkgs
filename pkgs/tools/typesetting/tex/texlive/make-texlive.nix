@@ -6,7 +6,7 @@
 , makeScopeWithSplicing, pkgsBuildBuild, pkgsBuildHost, pkgsBuildTarget, pkgsHostHost, pkgsHostTarget
 , fetchurl, runCommand
 , ghostscript_headless, harfbuzz
-, tlpdb, version, fixedHashes, urlPrefixes, tlpdbxzHash, src, useFixedHashes
+, tlpdb, version, fixedHashes ? {}, urlPrefixes, tlpdbxzHash, src, useFixedHashes ? false
 }:
 
 let

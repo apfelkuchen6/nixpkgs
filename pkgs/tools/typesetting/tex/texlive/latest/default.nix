@@ -1,6 +1,6 @@
 { callPackage, lib, fetchurl, useFixedHashes ? true
 , luametatex, runCommand, makeWrapper, mupdf, potrace, fetchpatch }:
-let attrs = (callPackage ./../default.nix rec {
+let attrs = (callPackage ./../make-texlive.nix rec {
   version = {
     # day of the snapshot being taken
     year = "2023";
