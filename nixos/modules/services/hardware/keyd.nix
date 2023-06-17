@@ -87,7 +87,6 @@ in
         RuntimeDirectory = "keyd";
 
         # Hardening
-        CapabilityBoundingSet = "";
         DeviceAllow = [
           "char-input rw"
           "/dev/uinput rw"
@@ -96,7 +95,6 @@ in
         PrivateNetwork = true;
         ProtectHome = true;
         ProtectHostname = true;
-        PrivateUsers = true;
         PrivateMounts = true;
         PrivateTmp = true;
         RestrictNamespaces = true;
@@ -108,11 +106,6 @@ in
         RestrictRealtime = true;
         LockPersonality = true;
         ProtectProc = "invisible";
-        SystemCallFilter = [
-          "@system-service"
-          "~@privileged"
-          "~@resources"
-        ];
         RestrictAddressFamilies = [ "AF_UNIX" ];
         RestrictSUIDSGID = true;
         IPAddressDeny = [ "any" ];
@@ -120,6 +113,15 @@ in
         ProtectSystem = "strict";
         ProcSubset = "pid";
         UMask = "0077";
+        # worked for v2.4.2, fail the test on v2.4.3:
+        # TODO: investigate stricter, still working settings
+        # SystemCallFilter = [
+        #   "@system-service"
+        #   "~@privileged"
+        #   "~@resources"
+        # ];
+        # CapabilityBoundingSet = "";
+        # PrivateUsers = true;
       };
     };
   };
