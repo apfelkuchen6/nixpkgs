@@ -10,13 +10,13 @@
 }:
 
 let
-  version = "2.4.2";
+  version = "2.4.3";
 
   src = fetchFromGitHub {
     owner = "rvaiya";
     repo = "keyd";
     rev = "v" + version;
-    hash = "sha256-QWr+xog16MmybhQlEWbskYa/dypb9Ld54MOdobTbyMo=";
+    hash = "sha256-NhZnFIdK0yHgFR+rJm4cW+uEhuQkOpCSLwlXNQy6jas=";
   };
 
   pypkgs = python3.pkgs;
@@ -43,13 +43,12 @@ let
   };
 
 in
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "keyd";
   inherit version src;
 
   postPatch = ''
     substituteInPlace Makefile \
-      --replace DESTDIR= DESTDIR=${placeholder "out"} \
       --replace /usr ""
 
     substituteInPlace keyd.service \
@@ -61,7 +60,8 @@ stdenv.mkDerivation rec {
   enableParallelBuilding = true;
 
   # post-2.4.2 may need this to unbreak the test
-  # makeFlags = [ "SOCKET_PATH/run/keyd/keyd.socket" ];
+  makeFlags = [ "DESTDIR=${placeholder "out"}"
+                "SOCKET_PATH=/run/keyd/keyd.socket"  ];
 
   postInstall = ''
     ln -sf ${lib.getExe appMap} $out/bin/${appMap.pname}
@@ -76,4 +76,4 @@ stdenv.mkDerivation rec {
     maintainers = with maintainers; [ peterhoeg ];
     platforms = platforms.linux;
   };
-}
+})
