@@ -8,22 +8,8 @@
 , tlpdb, tlpdbxzHash, src, texliveVersion, mirrors, useFixedHashes ? true, fixedHashes ? {}
 }:
 let
-  tlpdbVersion = tlpdb."00texlive.config";
-
-  tlpdbxz = fetchurl {
-    urls = map (up: "${up}/tlpkg/texlive.tlpdb.xz") mirrors;
-    hash = tlpdbxzHash;
-  };
-
-  tlpdbNix = runCommand "tlpdb.nix" {
-    inherit tlpdbxz;
-    tl2nix = ./tl2nix.sed;
-  }
-  ''
-    xzcat "$tlpdbxz" | sed -rn -f "$tl2nix" | uniq > "$out"
-  '';
-
   assertions = self: with lib;
+    let tlpdbVersion = tlpdb."00texlive.config"; in
     assertMsg (tlpdbVersion.year == texliveVersion.texliveYear) "TeX Live year in texlive does not match tlpdb.nix, refusing to evaluate" &&
     assertMsg (tlpdbVersion.frozen == texliveVersion.final) "TeX Live final status in texlive does not match tlpdb.nix, refusing to evaluate" &&
     (!useFixedHashes ||
@@ -58,7 +44,8 @@ let
 
     overrides = callPackage ./overrides.nix {
       inherit (self) bin;
-      inherit tlpdb tlpdbxz;
+      inherit tlpdb;
+      tlpdbxz = self.tlpdb.xz;
     };
 
     texlivePackages = let
@@ -73,10 +60,20 @@ let
         // lib.optionalAttrs (args ? deps) { deps = map (n: self.texlivePackages.${n}) (args.deps or [ ]); })
     ) (self.overrides tlpdb);
 
-    tlpdb = {
+    tlpdb = rec {
       # nested in an attribute set to prevent them from appearing in search
-      nix = tlpdbNix;
-      xz = tlpdbxz;
+      xz = fetchurl {
+        urls = map (up: "${up}/tlpkg/texlive.tlpdb.xz") mirrors;
+        hash = tlpdbxzHash;
+      };
+
+      nix = runCommand "tlpdb.nix" {
+        tlpdbxz = xz;
+        tl2nix = ./tl2nix.sed;
+      }
+      ''
+        xzcat "$tlpdbxz" | sed -rn -f "$tl2nix" | uniq > "$out"
+      '';
     };
 
     # Pre-defined combined packages for TeX Live schemes,
