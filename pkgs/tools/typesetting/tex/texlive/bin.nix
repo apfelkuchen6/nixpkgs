@@ -1,5 +1,5 @@
 { lib, stdenv, fetchurl, fetchpatch, buildPackages
-, texlive
+, texlivePackages, bin, combine, src, texliveVersion, tlpdb
 , zlib, libiconv, libpng, libX11
 , freetype, gd, libXaw, icu, ghostscript, libXpm, libXmu, libXext
 , perl, perlPackages, python3Packages, pkg-config
@@ -13,22 +13,14 @@
 
 let
   withSystemLibs = map (libname: "--with-system-${libname}");
-
-  year = toString ((import ./tlpdb.nix)."00texlive.config").year;
-  version = year; # keep names simple for now
+  version = toString texliveVersion.texliveYear;
 
   # detect and stop redundant rebuilds that may occur when building new fixed hashes
   assertFixedHash = name: src:
     if ! useFixedHashes || src ? outputHash then src else throw "The TeX Live package '${src.pname}' must have a fixed hash before building '${name}'.";
 
   common = {
-    src = fetchurl {
-      urls = [
-        "http://ftp.math.utah.edu/pub/tex/historic/systems/texlive/${year}/texlive-${year}0321-source.tar.xz"
-              "ftp://tug.ctan.org/pub/tex/historic/systems/texlive/${year}/texlive-${year}0321-source.tar.xz"
-      ];
-      hash = "sha256-X/o0heUessRJBJZFD8abnXvXy55TNX2S20vNT9YXm1Y=";
-    };
+    inherit src;
 
     prePatch = ''
       for i in texk/kpathsea/mktex*; do
@@ -76,7 +68,7 @@ let
 in rec { # un-indented
 
 inherit (common) cleanBrokenLinks;
-texliveYear = year;
+texliveYear = version;
 
 
 core = stdenv.mkDerivation rec {
@@ -92,8 +84,8 @@ core = stdenv.mkDerivation rec {
   ] ++ lib.optionals (!stdenv.buildPlatform.canExecute stdenv.hostPlatform) [
     # configure: error: tangle was not found but is required when cross-compiling.
     # dev (himktables) is used when building hitex to generate the additional source file hitables.c
-    texlive.bin.core
-    texlive.bin.core.dev
+    bin.core
+    bin.core.dev
   ];
 
   buildInputs = [
@@ -392,7 +384,7 @@ pygmentex = python3Packages.buildPythonApplication rec {
   inherit (src) version;
   format = "other";
 
-  src = assertFixedHash pname (lib.head (builtins.filter (p: p.tlType == "run") texlive.pygmentex.pkgs));
+  src = assertFixedHash pname (lib.head (builtins.filter (p: p.tlType == "run") texlivePackages.pygmentex.pkgs));
 
   propagatedBuildInputs = with python3Packages; [ pygments chardet ];
 
@@ -494,7 +486,7 @@ xindy = stdenv.mkDerivation {
 
   nativeBuildInputs = [
     pkg-config perl
-    (texlive.combine { inherit (texlive) scheme-basic cyrillic ec; })
+    (combine { inherit (texlivePackages) scheme-basic cyrillic ec; })
   ];
   buildInputs = [ clisp libiconv perl ];
 
