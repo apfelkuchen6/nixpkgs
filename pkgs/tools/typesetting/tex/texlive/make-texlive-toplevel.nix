@@ -25,21 +25,9 @@ let
     };
 
     # function for creating a working environment from a set of TL packages
-    combine =#  let
-      # tlpdbVersion = tlpdb."00texlive.config";
-
-      # assertions = with lib;
-      #   assertMsg (tlpdbVersion.year == texliveVersion.texliveYear) "TeX Live year in texlive does not match tlpdb.nix, refusing to evaluate" &&
-      #   assertMsg (tlpdbVersion.frozen == texliveVersion.final) "TeX Live final status in texlive does not match tlpdb.nix, refusing to evaluate" &&
-      #   (!useFixedHashes ||
-      #     (let all = concatLists (catAttrs "pkgs" (attrValues self.texlivePackages));
-      #       fods = filter (p: isDerivation p && p.tlType != "bin") all;
-      #     in builtins.all (p: assertMsg (p ? outputHash) "The TeX Live package '${p.pname + lib.optionalString (p.tlType != "run") ("." + p.tlType)}' does not have a fixed output hash. Please read UPGRADING.md on how to build a new 'fixed-hashes.nix'.") fods));
-
-      # in assert assertions;
-        callPackage ./combine.nix {
-        ghostscript = ghostscript_headless;
-      };
+    combine = callPackage ./combine.nix {
+      ghostscript = ghostscript_headless;
+    };
 
     overrides = callPackage ./overrides.nix { tlpdbxz = self.tlpdb.xz; };
 
