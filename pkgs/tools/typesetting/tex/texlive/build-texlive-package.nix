@@ -11,12 +11,13 @@
 , snobol4
 , tk
 
-  # TeX Live prerequisites
-, texliveBinaries
+#   # TeX Live prerequisites
+# , texliveBinaries
 }:
 
 { pname
 , revision
+, texliveBinaries
 , version ? toString revision
 , sha512
 , mirrors
@@ -95,7 +96,7 @@ let
   source = lib.optional (sha512 ? source) (mkContainer "source" commonPassthru sha512.source);
 
   tlpkg = let passthru = commonPassthru
-    // lib.optionalAttrs (args ? postactionScript) { postactionScript = args.postactionScript; }; in
+    // lib.optionalAttrs (args ? postactionScript) { inherit (args) postactionScript; }; in
     lib.optional hasTlpkg (mkContainer "tlpkg" passthru sha512.run);
 
   bin = lib.optional (args ? binfiles && args.binfiles != [ ]) (

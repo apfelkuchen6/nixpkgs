@@ -1,6 +1,6 @@
 { lib, tlpdb, bin, tlpdbxz
 , coreutils, python3, ruby, perl, gnused, gnugrep, ghostscript_headless
-, ps2eps, findutils, getopt, gnumake, zip, ncurses, gawk, gzip }:
+, findutils, getopt, gnumake, zip, ncurses, gawk, gzip }:
 _orig:
 let
   tlpdbVersion = tlpdb."00texlive.config";

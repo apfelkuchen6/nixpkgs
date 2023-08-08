@@ -27,7 +27,7 @@
 
   fixedHashes = lib.optionalAttrs useFixedHashes (import ./fixed-hashes.nix);
   inherit useFixedHashes;
-}).overrideScope (self: super: {
+}).overrideScope (_self: super: {
   bin = super.bin // {
     core = super.bin.core.overrideAttrs (olds: {
       patches = (olds.patches or []) ++ [
@@ -36,6 +36,8 @@
         ./fix-implicit-int.patch
       ];
     });
+
+    hi = "na";
 
     core-big = super.bin.core-big.overrideAttrs (olds: {
       patches = (olds.patches or []) ++ [

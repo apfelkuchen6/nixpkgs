@@ -1,11 +1,10 @@
-{ lib, stdenv, fetchurl, fetchpatch, buildPackages
-, texlivePackages, bin, combine, src, texliveVersion, tlpdb
-, zlib, libiconv, libpng, libX11
+{ lib, stdenv, fetchpatch, buildPackages
+, texlivePackages, bin, combine, src, texliveVersion, zlib, libiconv, libpng, libX11
 , freetype, gd, libXaw, icu, ghostscript, libXpm, libXmu, libXext
-, perl, perlPackages, python3Packages, pkg-config
+, perl, python3Packages, pkg-config
 , libpaper, graphite2, zziplib, harfbuzz, potrace, gmp, mpfr
 , brotli, cairo, pixman, xorg, clisp, biber, woff2, xxHash
-, makeWrapper, shortenPerlShebang, useFixedHashes, asymptote
+, makeWrapper, useFixedHashes, asymptote
 }:
 
 # Useful resource covering build options:

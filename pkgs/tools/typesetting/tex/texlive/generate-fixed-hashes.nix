@@ -14,7 +14,7 @@ with lib; let
   hash = fod: fod.outputHash or (builtins.readFile (computeHash fod));
 
   hashes = { pkgs }:
-    concatMapStrings ({ tlType, ... }@p: lib.optionalString (tlType != "bin" && isDerivation p) (''${tlType}="${hash p}";'')) pkgs;
+    concatMapStrings ({ tlType, ... }@p: lib.optionalString (tlType != "bin" && isDerivation p) ''${tlType}="${hash p}";'') pkgs;
 
   hashLine = { pkgs }@pkg:
     let

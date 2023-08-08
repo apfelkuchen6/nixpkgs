@@ -2,63 +2,50 @@
   - source: ../../../../../doc/languages-frameworks/texlive.xml
   - current html: https://nixos.org/nixpkgs/manual/#sec-language-texlive
 */
-{ makeScopeWithSplicing, pkgsBuildBuild, pkgsBuildHost, pkgsBuildTarget, pkgsHostHost, pkgsHostTarget
-, lib, fetchurl, callPackage, runCommand, recurseIntoAttrs
+{ makeScopeWithSplicing, generateSplicesForMkScope
+, lib, fetchurl, runCommand, recurseIntoAttrs
 , ghostscript_headless, harfbuzz, biber
 , tlpdb, tlpdbxzHash, src, texliveVersion, mirrors, useFixedHashes ? true, fixedHashes ? {}
 }:
 let
-  assertions = self: with lib;
-    let tlpdbVersion = tlpdb."00texlive.config"; in
-    assertMsg (tlpdbVersion.year == texliveVersion.texliveYear) "TeX Live year in texlive does not match tlpdb.nix, refusing to evaluate" &&
-    assertMsg (tlpdbVersion.frozen == texliveVersion.final) "TeX Live final status in texlive does not match tlpdb.nix, refusing to evaluate" &&
-    (!useFixedHashes ||
-      (let all = concatLists (catAttrs "pkgs" (attrValues self.texlivePackages));
-         fods = filter (p: isDerivation p && p.tlType != "bin") all;
-      in builtins.all (p: assertMsg (p ? outputHash) "The TeX Live package '${p.pname + lib.optionalString (p.tlType != "run") ("." + p.tlType)}' does not have a fixed output hash. Please read UPGRADING.md on how to build a new 'fixed-hashes.nix'.") fods));
+  texlive = makeScopeWithSplicing (generateSplicesForMkScope "texlive") (_extra: { }) (_keep: { }) (self:
+    let
+      callPackage = self.newScope {inherit tlpdb tlpdbxzHash src texliveVersion mirrors useFixedHashes fixedHashes; };
+    in {
 
-  spliced = {
-    selfBuildBuild = pkgsBuildBuild.callPackage ./. {};
-    selfBuildHost = pkgsBuildHost.callPackage ./. {} ;
-    selfBuildTarget = pkgsBuildTarget.callPackage ./. {};
-    selfHostHost = pkgsHostHost.callPackage ./. {};
-    selfHostTarget = pkgsHostTarget.callPackage ./. {};
-    selfTargetTarget = {};
-  };
+    inherit callPackage;
 
-  texlive = makeScopeWithSplicing spliced (_extra: { }) (_keep: { }) (self: {
     # various binaries (compiled)
-    bin = self.callPackage ./bin.nix {
+    bin = callPackage ./bin.nix {
       biber = biber.override { texlive = self; };
       ghostscript = ghostscript_headless;
       harfbuzz = harfbuzz.override {
         withIcu = true; withGraphite2 = true;
       };
-      inherit texliveVersion src tlpdb useFixedHashes;
     };
 
     # function for creating a working environment from a set of TL packages
-    combine = assert (assertions self); self.callPackage ./combine.nix {
-      ghostscript = ghostscript_headless;
-    };
+    combine =#  let
+      # tlpdbVersion = tlpdb."00texlive.config";
 
-    overrides = callPackage ./overrides.nix {
-      inherit (self) bin;
-      inherit tlpdb;
-      tlpdbxz = self.tlpdb.xz;
-    };
+      # assertions = with lib;
+      #   assertMsg (tlpdbVersion.year == texliveVersion.texliveYear) "TeX Live year in texlive does not match tlpdb.nix, refusing to evaluate" &&
+      #   assertMsg (tlpdbVersion.frozen == texliveVersion.final) "TeX Live final status in texlive does not match tlpdb.nix, refusing to evaluate" &&
+      #   (!useFixedHashes ||
+      #     (let all = concatLists (catAttrs "pkgs" (attrValues self.texlivePackages));
+      #       fods = filter (p: isDerivation p && p.tlType != "bin") all;
+      #     in builtins.all (p: assertMsg (p ? outputHash) "The TeX Live package '${p.pname + lib.optionalString (p.tlType != "run") ("." + p.tlType)}' does not have a fixed output hash. Please read UPGRADING.md on how to build a new 'fixed-hashes.nix'.") fods));
 
-    texlivePackages = let
-      buildTeXLivePackage = self.callPackage ./build-texlive-package.nix {
-        texliveBinaries = self.bin;
+      # in assert assertions;
+        callPackage ./combine.nix {
+        ghostscript = ghostscript_headless;
       };
 
-    in lib.mapAttrs (pname: { revision, extraRevision ? "", ... }@args:
-      buildTeXLivePackage (args
-        # NOTE: the fixed naming scheme must match generate-fixed-hashes.nix
-        // { inherit mirrors pname; fixedHashes = fixedHashes."${pname}-${toString revision}${extraRevision}" or { }; }
-        // lib.optionalAttrs (args ? deps) { deps = map (n: self.texlivePackages.${n}) (args.deps or [ ]); })
-    ) (self.overrides tlpdb);
+    overrides = callPackage ./overrides.nix { tlpdbxz = self.tlpdb.xz; };
+
+    texlivePackages = callPackage ./package-set.nix { };
+
+    finalTlpdb = self.overrides tlpdb;
 
     tlpdb = rec {
       # nested in an attribute set to prevent them from appearing in search
@@ -125,7 +112,7 @@ let
   });
 
   applyOverScope = f: scope: f (scope // {
-      overrideScope = g: applyOverScope f (scope.overrideScope g);
+    overrideScope = g: applyOverScope f (scope.overrideScope g);
   });
 
   # for backward compability

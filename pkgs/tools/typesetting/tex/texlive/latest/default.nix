@@ -1,5 +1,5 @@
 { callPackage, lib, fetchurl, useFixedHashes ? true
-, luametatex, runCommand, makeWrapper, mupdf, potrace, fetchpatch }:
+, makeWrapper, mupdf, potrace, fetchpatch }:
 (callPackage ./../make-texlive-toplevel.nix rec {
   texliveVersion = {
     # day of the snapshot being taken
@@ -31,7 +31,7 @@
 
   fixedHashes = lib.optionalAttrs useFixedHashes (import ./fixed-hashes.nix);
   inherit useFixedHashes;
-}).overrideScope (self: super: {
+}).overrideScope (_self: super: {
   bin = super.bin // {
     core-big = super.bin.core-big.overrideAttrs (olds: {
       # fixes a security-issue in luatex that allows arbitrary code execution even with shell-escape disabled,
