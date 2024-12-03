@@ -66,7 +66,7 @@ let
           fi
           if [ -n "$HOST_ADDRESS6" ]; then
             ip -6 route add $HOST_ADDRESS6 dev eth0
-            ip -6 route add default via $HOST_ADDRESS6
+            ip -6 route add default via $HOST_ADDRESS6 src ''${LOCAL_ADDRESS6%/*}
           fi
         fi
 
@@ -215,11 +215,11 @@ let
         if cfg.${attribute} == null then
           ''
             if [ -n "${variable}" ]; then
-              ${ipcmd} add "${variable}" dev "$ifaceHost"
+              ${ipcmd} add "${variable}" dev "$ifaceHost" || true
             fi
           ''
         else
-          ''${ipcmd} add ${cfg.${attribute}} dev "$ifaceHost"'';
+          ''${ipcmd} add ${cfg.${attribute}} dev "$ifaceHost" || true'';
       renderExtraVeth = name: cfg:
         if cfg.hostBridge != null then
           ''
@@ -232,16 +232,16 @@ let
             ip link set dev "${name}" up
             # Set IPs and routes for ${name}
             ${optionalString (cfg.hostAddress != null) ''
-              ip addr add ${cfg.hostAddress} dev "${name}"
+              ip addr add ${cfg.hostAddress} dev "${name}" || true
             ''}
             ${optionalString (cfg.hostAddress6 != null) ''
-              ip -6 addr add ${cfg.hostAddress6} dev "${name}"
+              ip -6 addr add ${cfg.hostAddress6} dev "${name}" || true
             ''}
             ${optionalString (cfg.localAddress != null) ''
-              ip route add ${cfg.localAddress} dev "${name}"
+              ip route add ${cfg.localAddress} dev "${name}" || true
             ''}
             ${optionalString (cfg.localAddress6 != null) ''
-              ip -6 route add ${cfg.localAddress6} dev "${name}"
+              ip -6 route add ${cfg.localAddress6} dev "${name}" || true
             ''}
           '';
     in
